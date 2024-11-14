@@ -1,11 +1,21 @@
 <?php
-include('db.connection.php');
+include('db.connection.php');  // Include the database connection
 
-// Fetch all payments linked to orders
-$order_id = $_GET['order_id']; // Get order ID from the URL
+// Check if order_id is passed in the URL
+if (isset($_GET['order_id'])) {
+    $order_id = $_GET['order_id'];  // Get the order ID from the URL
+} else {
+    // If no order_id is passed, redirect or show an error
+    echo "Order ID is missing!";
+    exit();
+}
 
-$query = "SELECT * FROM Payments WHERE order_id = $order_id";
-$result = $conn->query($query);
+// Fetch all payments linked to the order
+$query = "SELECT * FROM Payments WHERE order_id = :order_id";
+$stmt = $pdo->prepare($query);
+$stmt->bindParam(':order_id', $order_id, PDO::PARAM_INT);
+$stmt->execute();
+$result = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <!DOCTYPE html>
@@ -19,7 +29,7 @@ $result = $conn->query($query);
 <body>
 
 <div class="container mt-4">
-    <h2>Payments for Order ID: <?= $order_id ?></h2>
+    <h2>Payments for Order ID: <?= htmlspecialchars($order_id) ?></h2>
 
     <!-- Payments Table -->
     <table class="table table-striped mt-4">
@@ -32,14 +42,20 @@ $result = $conn->query($query);
             </tr>
         </thead>
         <tbody>
-            <?php while ($row = $result->fetch_assoc()): ?>
+            <?php if ($result): ?>
+                <?php foreach ($result as $row): ?>
+                    <tr>
+                        <td><?= htmlspecialchars($row['payment_date']) ?></td>
+                        <td>$<?= number_format($row['amount'], 2) ?></td>
+                        <td><?= htmlspecialchars($row['method']) ?></td>
+                        <td><?= htmlspecialchars($row['status']) ?></td>
+                    </tr>
+                <?php endforeach; ?>
+            <?php else: ?>
                 <tr>
-                    <td><?= $row['payment_date'] ?></td>
-                    <td>$<?= number_format($row['amount'], 2) ?></td>
-                    <td><?= $row['method'] ?></td>
-                    <td><?= $row['status'] ?></td>
+                    <td colspan="4" class="text-center">No payments found for this order.</td>
                 </tr>
-            <?php endwhile; ?>
+            <?php endif; ?>
         </tbody>
     </table>
 </div>

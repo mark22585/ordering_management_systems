@@ -1,12 +1,25 @@
 <?php
-include('db.connection.php');
+include('db.connection.php');  // Include the database connection
 
-// Fetch all orders and their items
-$order_id = $_GET['order_id']; // Get order ID from the URL
+// Check if order_id is passed in the URL
+if (isset($_GET['order_id'])) {
+    $order_id = $_GET['order_id'];  // Get the order ID from the URL
+} else {
+    // If no order_id is passed, redirect or show an error
+    echo "Order ID is missing!";
+    exit();
+}
 
-$query = "SELECT oi.id, oi.quantity, oi.price, p.name as product_name FROM OrderItems oi
-          JOIN Products p ON oi.product_id = p.id WHERE oi.order_id = $order_id";
-$result = $conn->query($query);
+// Fetch all order items linked to the order
+$query = "SELECT oi.id, oi.quantity, oi.price, p.name as product_name 
+          FROM OrderItems oi
+          JOIN Products p ON oi.product_id = p.id 
+          WHERE oi.order_id = :order_id";
+
+$stmt = $pdo->prepare($query);  // Use PDO prepared statements to prevent SQL injection
+$stmt->bindParam(':order_id', $order_id, PDO::PARAM_INT);
+$stmt->execute();
+$result = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <!DOCTYPE html>
@@ -21,7 +34,7 @@ $result = $conn->query($query);
 
 <div class="container mt-4">
     <h2>Order Items</h2>
-    <h3>Order ID: <?= $order_id ?></h3>
+    <h3>Order ID: <?= htmlspecialchars($order_id) ?></h3>
 
     <!-- Order Items Table -->
     <table class="table table-striped mt-4">
@@ -33,13 +46,19 @@ $result = $conn->query($query);
             </tr>
         </thead>
         <tbody>
-            <?php while ($row = $result->fetch_assoc()): ?>
+            <?php if ($result): ?>
+                <?php foreach ($result as $row): ?>
+                    <tr>
+                        <td><?= htmlspecialchars($row['product_name']) ?></td>
+                        <td><?= htmlspecialchars($row['quantity']) ?></td>
+                        <td>$<?= number_format($row['price'], 2) ?></td>
+                    </tr>
+                <?php endforeach; ?>
+            <?php else: ?>
                 <tr>
-                    <td><?= $row['product_name'] ?></td>
-                    <td><?= $row['quantity'] ?></td>
-                    <td>$<?= number_format($row['price'], 2) ?></td>
+                    <td colspan="3" class="text-center">No items found for this order.</td>
                 </tr>
-            <?php endwhile; ?>
+            <?php endif; ?>
         </tbody>
     </table>
 </div>
