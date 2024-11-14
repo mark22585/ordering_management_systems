@@ -1,32 +1,43 @@
 <?php
-include('db.connection.php');
+include('db.connection.php');  // Include the database connection
 
 // Insert Order
 if (isset($_POST['add_order'])) {
     $customer_id = $_POST['customer_id'];
     $total = $_POST['total'];
 
-    $query = "INSERT INTO Orders (customer_id, total) VALUES ('$customer_id', '$total')";
-    if ($conn->query($query) === TRUE) {
+    // Use PDO to insert data
+    $query = "INSERT INTO Orders (customer_id, total) VALUES (:customer_id, :total)";
+    $stmt = $pdo->prepare($query);
+    $stmt->bindParam(':customer_id', $customer_id);
+    $stmt->bindParam(':total', $total);
+
+    try {
+        $stmt->execute();
         echo "New order added successfully!";
-    } else {
-        echo "Error: " . $conn->error;
+    } catch (PDOException $e) {
+        echo "Error: " . $e->getMessage();
     }
 }
 
 // Delete Order
 if (isset($_GET['delete_order'])) {
     $order_id = $_GET['delete_order'];
-    $query = "DELETE FROM Orders WHERE id=$order_id";
-    if ($conn->query($query) === TRUE) {
+    $query = "DELETE FROM Orders WHERE id=:id";
+    $stmt = $pdo->prepare($query);
+    $stmt->bindParam(':id', $order_id);
+
+    try {
+        $stmt->execute();
         echo "Order deleted successfully!";
-    } else {
-        echo "Error: " . $conn->error;
+    } catch (PDOException $e) {
+        echo "Error: " . $e->getMessage();
     }
 }
 
+// Get all orders
 $query = "SELECT * FROM Orders";
-$result = $conn->query($query);
+$stmt = $pdo->query($query);
 ?>
 
 <!DOCTYPE html>
@@ -36,6 +47,7 @@ $result = $conn->query($query);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Orders</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 <body>
 
@@ -44,6 +56,11 @@ $result = $conn->query($query);
 
     <!-- Button to Add Order -->
     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addOrderModal">Add Order</button>
+
+    <!-- Button to open the Back to Dashboard modal -->
+    <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#backToDashboardModal">
+        <span class="material-icons">arrow_back</span> Back to Dashboard
+    </button>
 
     <!-- Orders Table -->
     <table class="table table-striped mt-4">
@@ -58,7 +75,7 @@ $result = $conn->query($query);
             </tr>
         </thead>
         <tbody>
-            <?php while ($row = $result->fetch_assoc()): ?>
+            <?php while ($row = $stmt->fetch(PDO::FETCH_ASSOC)): ?>
                 <tr>
                     <td><?= $row['id'] ?></td>
                     <td><?= $row['customer_id'] ?></td>
@@ -94,6 +111,25 @@ $result = $conn->query($query);
                     </div>
                     <button type="submit" name="add_order" class="btn btn-primary">Add Order</button>
                 </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Back to Dashboard Modal -->
+<div class="modal fade" id="backToDashboardModal" tabindex="-1" aria-labelledby="backToDashboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="backToDashboardModalLabel">Back to Dashboard</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to go back to the Dashboard?</p>
+            </div>
+            <div class="modal-footer">
+                <a href="dashboard.php" class="btn btn-primary">Go to Dashboard</a>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
             </div>
         </div>
     </div>

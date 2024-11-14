@@ -1,5 +1,5 @@
 <?php
-include('db.connection.php');
+include('db.connection.php');  // Include the database connection
 
 // Insert Product
 if (isset($_POST['add_product'])) {
@@ -9,10 +9,11 @@ if (isset($_POST['add_product'])) {
     $stock = $_POST['stock'];
 
     $query = "INSERT INTO Products (name, description, price, stock) VALUES ('$name', '$description', '$price', '$stock')";
-    if ($conn->query($query) === TRUE) {
+    try {
+        $pdo->exec($query);
         echo "New product added successfully!";
-    } else {
-        echo "Error: " . $conn->error;
+    } catch (PDOException $e) {
+        echo "Error: " . $e->getMessage();
     }
 }
 
@@ -20,15 +21,17 @@ if (isset($_POST['add_product'])) {
 if (isset($_GET['delete_product'])) {
     $product_id = $_GET['delete_product'];
     $query = "DELETE FROM Products WHERE id=$product_id";
-    if ($conn->query($query) === TRUE) {
+    try {
+        $pdo->exec($query);
         echo "Product deleted successfully!";
-    } else {
-        echo "Error: " . $conn->error;
+    } catch (PDOException $e) {
+        echo "Error: " . $e->getMessage();
     }
 }
 
+// Get all products
 $query = "SELECT * FROM Products";
-$result = $conn->query($query);
+$result = $pdo->query($query);
 ?>
 
 <!DOCTYPE html>
@@ -39,14 +42,17 @@ $result = $conn->query($query);
     <title>Products</title>
     <!-- Bootstrap for modal and styles -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"> <!-- Add Material Icons -->
 </head>
 <body>
 
 <div class="container mt-4">
     <h2>Product Management</h2>
     
-    <!-- Button to Add Product -->
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addProductModal">Add Product</button>
+    <!-- Back to Dashboard Button with Icon -->
+    <button class="btn btn-secondary mb-3" data-bs-toggle="modal" data-bs-target="#backToDashboardModal">
+        <span class="material-icons">dashboard</span> Back to Dashboard
+    </button>
 
     <!-- Products Table -->
     <table class="table table-striped mt-4">
@@ -61,7 +67,7 @@ $result = $conn->query($query);
             </tr>
         </thead>
         <tbody>
-            <?php while ($row = $result->fetch_assoc()): ?>
+            <?php while ($row = $result->fetch(PDO::FETCH_ASSOC)): ?>
                 <tr>
                     <td><?= $row['id'] ?></td>
                     <td><?= $row['name'] ?></td>
@@ -75,6 +81,25 @@ $result = $conn->query($query);
             <?php endwhile; ?>
         </tbody>
     </table>
+</div>
+
+<!-- Modal for Back to Dashboard Confirmation -->
+<div class="modal fade" id="backToDashboardModal" tabindex="-1" aria-labelledby="backToDashboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="backToDashboardModalLabel">Confirm Back to Dashboard</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to go back to the dashboard? Your unsaved changes may be lost.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <a href="dashboard.php" class="btn btn-primary">Yes, go back</a> <!-- Link to dashboard -->
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Add Product Modal -->

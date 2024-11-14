@@ -1,30 +1,33 @@
 <?php
 session_start();
-include('db.connection.php'); // Ensure this includes your database connection settings
+include('db.connection.php');
 
-// Check if the user is logged in, otherwise redirect to login page
+// Check if user is logged in
 if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
     header('Location: login.php');
     exit();
 }
 
-// User information from session
+// Retrieve session variables
 $user_id = $_SESSION['user_id'];
 $username = $_SESSION['username'];
 $email = $_SESSION['email'];
 
 // SQL Query to fetch user data and related information (e.g., total orders, total products)
-$sql = "SELECT users.username, users.email, COUNT(orders.id) AS total_orders, COUNT(products.id) AS total_products
+$sql = "SELECT users.username, users.email, 
+               COALESCE(COUNT(orders.id), 0) AS total_orders, 
+               COALESCE(COUNT(products.id), 0) AS total_products
         FROM users
         LEFT JOIN orders ON users.id = orders.customer_id
         LEFT JOIN orderitems ON orders.id = orderitems.order_id
         LEFT JOIN products ON orderitems.product_id = products.id
         WHERE users.id = :user_id
         GROUP BY users.id";
+
 $stmt = $pdo->prepare($sql);
 $stmt->execute(['user_id' => $user_id]);
 
-// Check if the query returns any result
+// Fetch the user data
 $user_data = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if ($user_data) {
@@ -42,230 +45,155 @@ if ($user_data) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard</title>
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"> <!-- Google Icons for buttons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            margin: 0;
-            padding: 0;
+            background-color: #121212;
+            color: white;
+            font-family: 'Arial', sans-serif;
         }
 
         .navbar {
             background-color: #333;
             padding: 15px;
-            color: white;
-            text-align: center;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
-        .navbar a {
+        .navbar .nav-link, .navbar button {
             color: white;
-            text-decoration: none;
-            padding: 10px;
         }
 
-        .navbar .menu {
-            display: flex;
-            gap: 15px;
-        }
-
-        .navbar a:hover {
-            background-color: #555;
-            border-radius: 5px;
-        }
-
-        .navbar .menu > a:nth-child(1) { background-color: green; }
-        .navbar .menu > a:nth-child(2) { background-color: blue; }
-        .navbar .menu > a:nth-child(3) { background-color: yellow; }
-
-        .container {
-            margin: 20px;
+        .dashboard-title {
+            text-align: center;
+            font-size: 2.5rem;
+            margin: 20px 0;
         }
 
         .dashboard-card {
-            background-color: white;
+            background-color: rgba(255, 255, 255, 0.1);
             border-radius: 8px;
             padding: 20px;
-            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
-        }
-
-        .card-title {
-            font-size: 24px;
-            margin-bottom: 10px;
-        }
-
-        .card-info {
-            font-size: 18px;
-            margin-bottom: 5px;
-        }
-
-        /* Modal styling */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgb(0, 0, 0);
-            background-color: rgba(0, 0, 0, 0.4);
-            padding-top: 60px;
-        }
-
-        .modal-content {
-            background-color: #fefefe;
-            margin: 5% auto;
-            padding: 20px;
-            border: 1px solid #888;
-            width: 80%;
-            max-width: 500px;
-        }
-
-        .close {
-            color: #aaa;
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
-        }
-
-        .close:hover,
-        .close:focus {
-            color: black;
-            text-decoration: none;
-            cursor: pointer;
-        }
-
-        .logout-button, .back-button {
-            background-color: #e74c3c;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            text-align: center;
             color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-        .logout-button:hover, .back-button:hover {
-            background-color: #c0392b;
-        }
-
-        .animated-button {
             transition: transform 0.3s ease;
         }
 
-        .animated-button:hover {
-            transform: scale(1.1);
+        .dashboard-card:hover {
+            transform: scale(1.05) rotate(3deg);
         }
 
-        /* Back to Landing Page Modal */
-        .back-modal .modal-content {
-            text-align: center;
+        .card-icon {
+            font-size: 4rem;
+            margin-bottom: 10px;
         }
 
-        .back-modal a {
-            color: blue;
-            font-size: 18px;
+        .container {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .modal-content {
+            background-color: #333;
+            color: white;
+            border-radius: 8px;
+        }
+
+        .dark-mode {
+            background-color: #121212;
+            color: white;
+        }
+
+        .logout-button {
+            background-color: #e60000;
+            color: white;
+            border: none;
+        }
+
+        .logout-button:hover {
+            background-color: #cc0000;
         }
     </style>
 </head>
 <body>
-
     <!-- Navbar -->
-    <div class="navbar">
-        <h2>Ordering Management System</h2>
-        <div class="menu">
-            <a href="#" id="manage-products">Manage Products</a>
-            <a href="#" id="manage-customers">Manage Customers</a>
-            <a href="#" id="manage-orders">Manage Orders</a>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">Ordering Management System</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="dashboard.php">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="products.php">Manage Products</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="customers.php">Manage Customers</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="orders.php">Manage Orders</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#logoutModal">
+                            <span class="material-icons">exit_to_app</span> Logout
+                        </a>
+                    </li>
+                </ul>
+            </div>
         </div>
-        <button class="logout-button animated-button" id="logout-btn"><span class="material-icons">exit_to_app</span> Logout</button>
-    </div>
+    </nav>
 
-    <!-- Main container -->
-    <div class="container">
+    <!-- Dashboard Content -->
+    <div class="container mt-4">
+        <h2 class="dashboard-title">Welcome, <?php echo htmlspecialchars($username); ?>!</h2>
         <div class="dashboard-card">
-            <div class="card-title">Welcome, <?php echo htmlspecialchars($username); ?>!</div>
-            <div class="card-info">Email: <?php echo htmlspecialchars($email); ?></div>
-            <div class="card-info">Total Orders: <?php echo $total_orders; ?></div>
-            <div class="card-info">Total Products Ordered: <?php echo $total_products; ?></div>
+            <span class="material-icons card-icon">shopping_cart</span>
+            <p>Total Products Ordered: <?php echo $total_products; ?></p>
         </div>
-
-        <!-- Back to Landing Page button -->
-        <button class="back-button animated-button" id="back-to-landing">Back to Landing Page</button>
+        <div class="dashboard-card">
+            <span class="material-icons card-icon">people</span>
+            <p>Total Customers: 45</p> <!-- Replace with actual dynamic data if available -->
+        </div>
+        <div class="dashboard-card">
+            <span class="material-icons card-icon">list_alt</span>
+            <p>Total Orders: <?php echo $total_orders; ?></p>
+        </div>
     </div>
 
     <!-- Logout Modal -->
-    <div id="logout-modal" class="modal">
-        <div class="modal-content">
-            <span class="close" id="close-logout">&times;</span>
-            <h2>Are you sure you want to log out?</h2>
-            <form action="logout.php" method="POST">
-                <button type="submit" class="logout-button">Yes, Logout</button>
-            </form>
+    <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="logoutModalLabel">Logout</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to logout?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <a href="logout.php" class="btn btn-danger">Logout</a>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- User Info Modal -->
-    <div id="user-info-modal" class="modal">
-        <div class="modal-content">
-            <span class="close" id="close-user-info">&times;</span>
-            <h2>User Info</h2>
-            <p><strong>Username:</strong> <?php echo htmlspecialchars($username); ?></p>
-            <p><strong>Email:</strong> <?php echo htmlspecialchars($email); ?></p>
-        </div>
-    </div>
-
-    <!-- Back to Landing Page Modal -->
-    <div id="back-modal" class="modal back-modal">
-        <div class="modal-content">
-            <h2>Are you sure you want to go back to the landing page?</h2>
-            <a href="index.php">Yes, go to Landing Page</a>
-            <button class="close" id="close-back">Close</button>
-        </div>
-    </div>
-
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Logout Modal
-        var logoutModal = document.getElementById("logout-modal");
-        var logoutBtn = document.getElementById("logout-btn");
-        var closeLogout = document.getElementById("close-logout");
-
-        logoutBtn.onclick = function() {
-            logoutModal.style.display = "block";
-        }
-
-        closeLogout.onclick = function() {
-            logoutModal.style.display = "none";
-        }
-
-        window.onclick = function(event) {
-            if (event.target == logoutModal) {
-                logoutModal.style.display = "none";
-            }
-        }
-
-        // User Info Modal
-        var userInfoModal = document.getElementById("user-info-modal");
-        var closeUserInfo = document.getElementById("close-user-info");
-
-        // Back to Landing Page Modal
-        var backModal = document.getElementById("back-modal");
-        var backBtn = document.getElementById("back-to-landing");
-        var closeBack = document.getElementById("close-back");
-
-        backBtn.onclick = function() {
-            backModal.style.display = "block";
-        }
-
-        closeBack.onclick = function() {
-            backModal.style.display = "none";
-        }
+        // Dark mode toggle
+        document.getElementById('dark-mode-toggle').addEventListener('click', function () {
+            document.body.classList.toggle('dark-mode');
+        });
     </script>
-
 </body>
 </html>

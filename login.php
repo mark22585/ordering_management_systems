@@ -22,8 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['email'] = $user['email'];
 
         // Debugging: Check if session is properly set
-        var_dump($_SESSION); // Add this to check session
-        exit();  // Stop here temporarily to check session
+        // var_dump($_SESSION); // Uncomment only for debugging
 
         // Redirect to dashboard
         header("Location: dashboard.php");
@@ -33,6 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
+
 
 
 <!DOCTYPE html>
