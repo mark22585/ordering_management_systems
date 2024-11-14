@@ -1,11 +1,11 @@
-<?php
+<?php 
 // register.php
+
+// Include the database connection file
+include('db.connection.php');
 
 // Check if the registration form is submitted
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Handle form submission for registration
-    include('db.connection.php');
-    
     // Capture user inputs
     $username = $_POST['username'];
     $email = $_POST['email'];
@@ -13,18 +13,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Insert user data into the database
     $sql = "INSERT INTO users (username, email, password) VALUES (:username, :email, :password)";
+    
+    // Prepare the statement
     $stmt = $pdo->prepare($sql);
 
     try {
+        // Execute the query with the provided data
         $stmt->execute(['username' => $username, 'email' => $email, 'password' => $password]);
+
         // Redirect to login page after successful registration
         header("Location: login.php?registration=success");
         exit();
     } catch (Exception $e) {
+        // Handle errors if any
         $error = "Error: " . $e->getMessage();
     }
 }
 ?>
+
 
 <!DOCTYPE html>
 <html lang="en">

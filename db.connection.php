@@ -1,16 +1,19 @@
 <?php
 // db.connection.php
 
-$servername = "localhost"; // Database server
-$username = "root"; // Your MySQL username
-$password = ""; // Your MySQL password
-$dbname = "ordering_management_system"; // Your database name
+$host = 'localhost'; // Database host
+$dbname = 'ordering_management_system'; // Database name
+$username = 'root'; // Database username
+$password = ''; // Database password
 
-// Create connection
-$conn = new mysqli($servername, $username, $password, $dbname);
-
-// Check connection
-if ($conn->connect_error) {
-die("Connection failed: " . $conn->connect_error);
+try {
+    // Create a PDO instance
+    $pdo = new PDO("mysql:host=$host;dbname=$dbname", $username, $password);
+    // Set the PDO error mode to exception
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+} catch (PDOException $e) {
+    // Handle connection errors
+    echo "Connection failed: " . $e->getMessage();
+    exit();
 }
 ?>

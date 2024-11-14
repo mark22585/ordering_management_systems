@@ -1,29 +1,34 @@
 <?php
 // login_process.php
 session_start();
-include('db.connection.php'); // Ensure this file contains the correct DB connection settings
+include('db.connection.php'); // Make sure this is the correct database connection file
 
 // Check if the form is submitted
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $username = $_POST['username'];
     $password = $_POST['password'];
 
-    // Query to check if the user exists
-    $query = "SELECT * FROM users WHERE (username = ? OR email = ?) AND password = ?";
-    $stmt = $conn->prepare($query);
-    $stmt->bind_param('sss', $username, $username, $password);
-    $stmt->execute();
-    $result = $stmt->get_result();
+    // Query to check if the user exists by username or email
+    $query = "SELECT * FROM users WHERE username = :username OR email = :email";
+    $stmt = $pdo->prepare($query);
+    $stmt->execute(['username' => $username, 'email' => $username]);
 
-    // Check if a user was found and password matches
-    if ($result->num_rows > 0) {
-        // Start a session and redirect to the dashboard
+    // Fetch user data
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    // Check if user exists and verify the password
+    if ($user && password_verify($password, $user['password'])) {
+        // Set session variables
         $_SESSION['loggedin'] = true;
-        $_SESSION['username'] = $username;
+        $_SESSION['user_id'] = $user['id'];
+        $_SESSION['username'] = $user['username'];
+        $_SESSION['email'] = $user['email'];
+
+        // Redirect to dashboard
         header('Location: dashboard.php');
         exit();
     } else {
-        // Redirect back to login with an error message
+        // Redirect back to login with error
         header('Location: login.php?error=true');
         exit();
     }
@@ -32,3 +37,4 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     header('Location: login.php');
     exit();
 }
+?>
